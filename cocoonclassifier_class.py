@@ -20,11 +20,13 @@ import pickle
 torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 class MODEL():
-    def __init__(self, modelname, n_epochs, batch_size,):
+    def __init__(self, modelname, n_epochs, batch_size, train_mode):
+        self.train_mode = train_mode
         if modelname == "vgg16":
             self.model = models.vgg16(pretrained=True)
-            for param in self.model.parameters():
-                param.requires_grad = False
+            if self.train_mode == feature_extraction :
+                for param in self.model.parameters():
+                    param.requires_grad = False
 
             self.model.classifier = torch.nn.Sequential(torch.nn.Linear(25088, 4096),
                                                 torch.nn.ReLU(),
@@ -34,9 +36,10 @@ class MODEL():
                                                 torch.nn.Dropout(p=0.5),
                                                 torch.nn.Linear(4096, 2))
         elif modelname == "resnet":
-            self.model = models.resnet50(pretrained=True)
-            for param in self.model.parameters():
-                param.requires_grad = False
+            self.model = models.resnet50(pretrained=True
+            if self.train_mode == feature_extraction:
+                for param in self.model.parameters():
+                    param.requires_grad = False
             self.model.fc = torch.nn.Sequential(
                torch.nn.Linear(2048, 128),
                torch.nn.ReLU(),
@@ -45,8 +48,9 @@ class MODEL():
 
         elif modelname == "googlenet":
             self.model = models.googlenet(pretrained=True)
-            for param in self.model.parameters():
-                param.requires_grad = False
+            if self.train_mode == feature_extraction:
+                for param in self.model.parameters():
+                    param.requires_grad = False
             self.model.fc = torch.nn.Sequential(
                torch.nn.Linear(1024, 128),
                torch.nn.ReLU(),
@@ -173,7 +177,7 @@ class MODEL():
               path = "models/{}/bs_{}".format(self.modelname, self.batch_size)
               if not os.path.isdir(path):
                 os.mkdir(path)
-              torch.save(self.model, "models/{}/bs_{}/eph_{}_bs_{}_1355&929_{}_finetune".format(self.modelname, self.batch_size, epoch, self.batch_size, self.modelname))
+              torch.save(self.model, "models/{}/{}/bs_{}/eph_{}_bs_{}_1355&929_{}_finetune".format(self.train_mode, self.modelname, self.batch_size, epoch, self.batch_size, self.modelname))
 
         end_time = time.time() - start_time
         print("Total time is:{:.0f}m {:.0f}s".format(end_time//60, end_time%60))
@@ -198,13 +202,13 @@ class MODEL():
         ax2.set_ylim([70, 100])
         ax2.tick_params(labelsize=20)
         ax2.legend(loc = 4, prop = {'size':15})
-        plt.savefig('out_put_chart/{}/bs_{}_1355&929_{}.png'.format(self.modelname, self.batch_size, self.modelname))
+        plt.savefig('out_put_chart/{}/{}/bs_{}_1355&929_{}.png'.format(self.train_mode, self.modelname, self.batch_size, self.modelname))
 
         # save params
         # define a list of places
         placesList = [self.train_loss, self.val_loss, self.train_acc, self.val_acc, self.batch_size]
 
-        with open('out_put_chart/{}/bs_{}_1355&929_{}.data'.format(self.modelname, self.batch_size, self.modelname), 'wb') as filehandle:
+        with open('out_put_chart/{}/{}/bs_{}_1355&929_{}.data'.format(self.train_mode, self.modelname, self.batch_size, self.modelname), 'wb') as filehandle:
             # store the data as binary data stream
             pickle.dump(placesList, filehandle)
 
@@ -281,9 +285,9 @@ class MODEL():
         print("recall:{:.2f}".format(self.recall), "| precision:{:.2f}".format(self.precision), "| f1_score:{:.2f}".format(self.f1_score))
 
 # conduct command
-for modelname in ['resnet' , 'vgg16']:
+for modelname in ['resnet' , 'vgg16', 'googlenet']:
     for batch_size in range(10, 110, 10):
-        cocoon = MODEL(modelname, 100, batch_size)
+        cocoon = MODEL(modelname, 100, batch_size, finetune)
         cocoon.read_train_data()
         cocoon.train()
         # cocoon.read_list('/content/drive/My Drive/Colab Notebooks/out_put_chart/bs_{}_1355&929_vgg16.data'.format(cocoon.batch_size))
